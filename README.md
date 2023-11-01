@@ -5,17 +5,16 @@
 # Tesla Fleet Telemetry
 ---------------------------------
 
-At Tesla, we believe that security and privacy are core tenets of any modern technology. Customers should be able to decide what data they share with third parties, how they share it, and when it can be shared. We've developed Fleet Telemetry, a decentralized framework that allows customers to create a secure and direct bridge from their Tesla devices to any provider they authorize. Fleet Telemetry is a simple, scalable, and secure data exchange service for vehicles and other devices.
+Fleet Telemetry is a server reference implementation for Tesla's telemetry protocol. Owners can allow registered applications to receive telemetry securely and directly from their vehicles. This reference implementation can be used by individual owners as is or by fleet operators who can extend it to aggregate data accross their fleet.
 
-Fleet Telemetry is a server reference implementation. The service handles device connectivity as well as receiving and storing transmitted data. Once configured, devices establish a WebSocket connection to push configurable telemetry records. Fleet Telemetry provides clients with ack, error, or rate limit responses.
-
+The service handles device connectivity as well as receiving and storing transmitted data. Once configured, devices establish a WebSocket connection to push configurable telemetry records. Fleet Telemetry provides clients with ack, error, or rate limit responses.
 
 ## Configuring and running the service
 
 As a service provider, you will need to register a publicly available endpoint to receive device connections. Tesla devices will rely on a mutual TLS (mTLS) WebSocket to create a connection with the backend. The application has been designed to operate on top of Kubernetes, but you can run it as a standalone binary if you prefer.
 
 ### Install on Kubernetes with Helm Chart (recommended)
-Please follow these [instructions](https://github.com/teslamotors/helm-charts/blob/main/charts/fleet-telemetry/README.md)
+For ease of installation and operation, we recommend running Fleet Telemetry on Kubernetes. Helm Charts help you define, install, and upgrade applications on Kubernetes. You can find a reference helm chart [here](https://github.com/teslamotors/helm-charts/blob/main/charts/fleet-telemetry/README.md).
 
 ### Install manually (skip this if you have installed with Helm on Kubernetes)
 1. Allocate and assign a [FQDN](https://en.wikipedia.org/wiki/Fully_qualified_domain_name). This will be used in the server and client (vehicle) configuration.
@@ -131,6 +130,10 @@ spec:
 ```
 Example: [client_config.json](./examples/client_config.json)
 
+## Vehicle Compatibility
+
+Vehicles must be running firmware version 2023.20.6 or later.  Some older model S/X are not supported.
+
 ## Backends/dispatchers
 The following [dispatchers](./telemetry/producer.go#L10-L19) are supported
 * Kafka (preferred): Configure with the config.json file.  See implementation here: [config/config.go](./config/config.go)
@@ -139,7 +142,10 @@ The following [dispatchers](./telemetry/producer.go#L10-L19) are supported
   * Configure stream names directly by setting the streams config `"kinesis": { "streams": { *topic_name*: stream_name } }`
   * Override stream names with env variables: KINESIS_STREAM_\*uppercase topic\* ex.: `KINESIS_STREAM_V`
 * Google pubsub: Along with the required pubsub config (See ./test/integration/config.json for example), be sure to set the environment variable `GOOGLE_APPLICATION_CREDENTIALS`
+* ZMQ: Configure with the config.json file.  See implementation here: [config/config.go](./config/config.go)
 * Logger: This is a simple STDOUT logger that serializes the protos to json.
+  
+>NOTE: To add a new dispatcher, please provide integration tests and updated documentation.
 
 ## Metrics
 Prometheus or a StatsD interface supporting data store for metrics. This is required for monitoring your applications.
@@ -191,6 +197,15 @@ make: *** [install] Error 1
 ~/fleet-telemetry➜ git:(main) ✗  export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:/opt/homebrew/Cellar/openssl@3/3.0.8/lib/pkgconfig/
 ```
 A reference to libcrypto is not set properly. To resolve find the reference to libcrypto by pkgconfig and set et the PKG_CONFIG_PATH accordingly.
+
+libzmq is missing. Install with:
+```sh
+sudo apt install -y libsodium-dev libzmq3-dev
+```
+Or for macOS:
+```sh
+brew install libsodium zmq
+```
 
 ## Integration Tests
 (Optional): If you want to recreate fake certs for your test: `make generate-certs`

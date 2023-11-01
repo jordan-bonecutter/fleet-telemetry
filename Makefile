@@ -7,6 +7,7 @@ ALPHA_IMAGE_NAME=fleet-telemetry-server-aplha:v0.0.1
 ALPHA_IMAGE_COMPRESSED_FILENAME := $(subst :,-, $(ALPHA_IMAGE_NAME))
 
 GO_FLAGS        ?=
+GO_FLAGS        += --ldflags 'extldflags="-static"'
 
 ifneq (,$(findstring darwin/arm,$(VERSION)))
     GO_FLAGS += -tags dynamic
@@ -44,7 +45,7 @@ test: install
 test-race: TEST_OPTIONS = -race
 test-race: test
 
-integration:
+integration: generate-certs
 	@echo "** RUNNING INTEGRATION TESTS **"
 	./test/integration/pretest.sh
 	docker-compose -p app -f docker-compose.yml build
